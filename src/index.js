@@ -1,6 +1,9 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { BrowserRouter, Route, withRouter } from 'react-router-dom';
+import * as Redux from 'redux';
+import * as ReactRedux from 'react-redux';
+
 import './index.css';
 import AuthorQuiz from './AuthorQuiz';
 import AddAuthorForm from "./AddAuthorForm";
@@ -90,19 +93,29 @@ function resetState() {
   }
 }
 
-let state = resetState();
-
-function onAnswerSelected(answer) {
-  const isCorrect = state.turnData.author.books.some(book => book == answer);
-  state.highlight = isCorrect ? 'correct' : 'wrong';
-  render();
+function reducer(state = { authors, turnData: getTurnData(authors), highlight: '' }, action) {
+  switch (action.type) {
+    case 'ANSWER_SELECTED':
+      const isCorrect = state.turnData.author.books.some(book => book == action.answer);
+      return Object.assign({}, state, { highlight: isCorrect ? 'correct' : 'wrong' });
+    case 'CONTINUE':
+      return Object.assign({}, state, {
+        highlight: '',
+        turnData: getTurnData(state.authors)
+      });
+    default: return state;
+  }
+  return state;
 }
 
+let store = Redux.createStore(reducer);
+
 function App() {
-  return <AuthorQuiz {...state} onAnswerSelected={onAnswerSelected} onContinue={() => {
-    state = resetState();
-    render();
-  }} />
+  return (
+    <ReactRedux.Provider store={store}>
+      <AuthorQuiz />
+    </ReactRedux.Provider>
+  )
 }
 
 const AuthorWrapper = withRouter(({ history }) =>
@@ -112,16 +125,13 @@ const AuthorWrapper = withRouter(({ history }) =>
   }} />
 );
 
-function render() {
-  ReactDOM.render(
-    <BrowserRouter>
-      <React.Fragment>
-        <Route exact path="/" component={App} />
-        <Route path="/add" component={AuthorWrapper} />
-      </React.Fragment>
-    </BrowserRouter>,
-    document.getElementById('root'));
-}
-render();
+ReactDOM.render(
+  <BrowserRouter>
+    <React.Fragment>
+      <Route exact path="/" component={App} />
+      <Route path="/add" component={AuthorWrapper} />
+    </React.Fragment>
+  </BrowserRouter>,
+  document.getElementById('root'));
 
 //registerServiceWorker();
